@@ -4,14 +4,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/gofiber/contrib/otelfiber"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/pooulad/nextjs-golang-crud-app/database/migrations"
 	"github.com/pooulad/nextjs-golang-crud-app/database/storage"
 	"github.com/pooulad/nextjs-golang-crud-app/repository"
+	"go.opentelemetry.io/otel"
 )
-
 
 func InitializeApp(app *fiber.App) {
 	_, ok := os.LookupEnv("APP_ENV")
@@ -45,14 +46,21 @@ func InitializeApp(app *fiber.App) {
 	repo := repository.Repository{
 		DB: db,
 	}
+
 	app.Use(cors.New(cors.Config{
 		AllowHeaders:     "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin",
-        AllowOrigins:     "*",
-        AllowCredentials: true,
-        AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowOrigins:     "*",
+		AllowCredentials: false,
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
 	}))
+
+	// Add OpenTelemetry middleware
+	app.Use(otelfiber.Middleware(
+		otelfiber.WithTracerProvider(otel.GetTracerProvider()),
+	))
+
 	repo.SetupRoutes(app)
-	listenErr := app.Listen(":8080")
+	listenErr := app.Listen(":8081")
 	if listenErr != nil {
 		log.Fatal(listenErr)
 	}
